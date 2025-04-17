@@ -1,0 +1,50 @@
+DRIVING_objects:
+  # Objects on or around the road
+  - Entity: "Car"
+    ID: 1
+    Colour: [66, 135, 245]
+  - Entity: "Road_Line"
+    ID: 2
+    Colour: [245, 102, 7]
+  - Entity: "Road_Sign"
+    ID: 3
+    Colour: [215, 245, 22]
+  - Entity: "Motorcycle"
+    ID: 4
+    Colour: [4, 222, 52]
+  - Entity: "Pedestrians"
+    ID: 5
+    Colour: [2, 227, 235]
+  - Entity: "Road_Marking"
+    ID: 6
+    Colour: [68, 2, 235]
+  - Entity: "Traffic_Light"
+    ID: 7
+    Colour: [255, 3, 196]
+  - Entity: "Traffic_Cone"
+    ID: 8
+    Colour: [122, 5, 23]
+  - Entity: "Animal"
+    ID: 9
+    Colour: [125, 66, 35]
+  - Entity: "Street_Furniture"
+    ID: 10
+    Colour: [125, 108, 35]
+  - Entity: "Bridge"
+    ID: 11
+    Colour: [34, 94, 17]
+  - Entity: "Building"
+    ID: 12
+    Colour: [76, 145, 105]
+  - Entity: "Railway_crossing"
+    ID: 13
+    Colour: [60, 92, 90]
+  - Entity: "Trees"
+    ID: 14
+    Colour: [29, 40, 61]
+  - Entity: "Mail_Box"
+    ID: 15
+    Colour: [106, 79, 117]
+  - Entity: "Fence"
+    ID: 16
+    Colour: [209, 155, 186]
