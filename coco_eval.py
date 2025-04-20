@@ -31,6 +31,7 @@ class CocoEvaluator(object):
         self.eval_imgs = {k: [] for k in iou_types}
 
     def update(self, predictions):
+        #print('hg84-predictions_key', predictions.keys())
         img_ids = list(np.unique(list(predictions.keys())))
         self.img_ids.extend(img_ids)
 
@@ -42,7 +43,7 @@ class CocoEvaluator(object):
             coco_eval.cocoDt = coco_dt
             coco_eval.params.imgIds = list(img_ids)
             img_ids, eval_imgs = evaluate(coco_eval)
-
+            #print('hg84:', iou_type)
             self.eval_imgs[iou_type].append(eval_imgs)
 
     def synchronize_between_processes(self):
@@ -246,7 +247,7 @@ def loadRes(self, resFile):
 
     # print('Loading and preparing results...')
     # tic = time.time()
-    if isinstance(resFile, torch._six.string_classes):
+    if isinstance(resFile, string_classes):
         anns = json.load(open(resFile))
     elif type(resFile) == np.ndarray:
         anns = self.loadNumpyAnnotations(resFile)
