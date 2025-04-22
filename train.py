@@ -54,8 +54,8 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 # our dataset has two classes only - background and person
 num_classes = label_num
 # use our dataset and defined transformations
-dataset = RevDataset('PennFudanPed', get_transform(train=True))
-dataset_test = RevDataset('PennFudanPed', get_transform(train=False))
+dataset = RevDataset('REV', get_transform(train=True))
+dataset_test = RevDataset('REV', get_transform(train=False))
 
 # split the dataset in train and test set
 indices = torch.randperm(len(dataset)).tolist()
@@ -87,7 +87,7 @@ lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                 gamma=0.1)
 
 # let's train it for 5 epochs
-num_epochs = 125
+num_epochs = 20
 
 for epoch in range(num_epochs):
     # train for one epoch, printing every 10 iterations

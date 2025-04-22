@@ -30,6 +30,13 @@ class LabelManager:
     def get_names(self):
         return self.class_names
     
+    def get_name(self, id:int):
+        return self.class_names[id]
+    
+    def get_label(self, name:str):
+        index = self.class_names.index(name)
+        return index + 1
+    
 
 def parse_label(filepath:str):
     with open(filepath, 'r') as file:

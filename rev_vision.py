@@ -18,7 +18,8 @@ class RevVision:
         self.label_manager = LabelManager()
         self.num_classes = self.label_manager.get_num() + 1
         self.model = build_model(self.num_classes)
-        self.model.load_state_dict(torch.load('rev_model.pt', weights_only=True))
+        # self.model.load_state_dict(torch.load('rev_model.pt', weights_only=True))
+        self.model.load_state_dict(torch.load('rev_demo.pt', weights_only=True))
         self.model.eval()
 
         self.class_names = ['__background__'] + self.label_manager.get_names()
@@ -52,7 +53,7 @@ class RevVision:
 
         return masks, pred_boxes, pred_class, labels
     
-    def segment_instance(self, image, confidence=0.7, rect_th=1, text_size=0.5, text_th=1):
+    def segment_instance(self, image, frame_id, confidence=0.7, rect_th=1, text_size=0.5, text_th=1, label_filter = 0, capture = False):
         start_time = time.perf_counter()
         masks, boxes, pred_cls, labels = self.get_prediction(image, confidence)
         end_time = time.perf_counter()
@@ -63,26 +64,61 @@ class RevVision:
         w = image.width
         out_img = np.zeros((h, w, 4), np.uint8)
         img_array = np.array(image)
+        capture_array = np.array(image).copy()
         #print('img_array', img_array.shape)
         
         for i in range(len(masks)):
             # rgb_mask = get_coloured_mask(masks[i])
             # img = cv2.addWeighted(img, 0.8, rgb_mask, 0.3, 0)
             label = labels[i]
+            if (label_filter > 0 and label_filter != label):
+                continue
             colour = self.label_manager.get_colour(label)
             # Efficiently apply color and alpha to the mask using NumPy
             mask = masks[i] > 0  # Create a boolean mask where the condition is true
-            colored_mask = np.array(colour + [153], dtype=np.uint8)
+            
+            if capture:
+                masked_pixels = capture_array[mask]
+
+                # Get the bounding box to create a white background image
+                mask_row_indices, mask_col_indices = np.where(mask)
+                min_row, max_row = np.min(mask_row_indices), np.max(mask_row_indices)
+                min_col, max_col = np.min(mask_col_indices), np.max(mask_col_indices)
+                masked_height = max_row - min_row + 1
+                masked_width = max_col - min_col + 1
+
+                # Create a white background image (RGB)
+                white_background = np.full((masked_height, masked_width, 3), 255, dtype=np.uint8)
+
+                # Get the corresponding pixels from the original image within the mask's bounding box
+                cropped_masked_pixels = capture_array[min_row:max_row + 1, min_col:max_col + 1]
+
+                # Create a mask for the cropped region
+                cropped_mask = mask[min_row:max_row + 1, min_col:max_col + 1]
+
+                # Apply the masked pixels onto the white background
+                white_background[cropped_mask] = cropped_masked_pixels[cropped_mask]
+
+                masked_region_image = Image.fromarray(white_background)
+                masked_region_image.save(f'capture/{pred_cls[i]}_{frame_id}_{i}.png')
+
+                alpha_channel = np.full((masked_pixels.shape[0], 1), 255, dtype=np.uint8)
+                colored_mask = np.concatenate((masked_pixels, alpha_channel), axis=1)
+                # out_img[mask] = colored_mask_rgba
+                
+            else:
+                colored_mask = np.array(colour + [153], dtype=np.uint8)
             out_img[mask] = colored_mask
             # for y in range(0, h):
             #     for x in range(0, w):
             #         if (masks[i][y, x] > 0):
             #             # alpha 60% = 153
             #             out_img[y, x] = colour + [153]
-            if (label in self.entities): 
+            if (label in self.entities):
                 pt1 = tuple([int(j) for j in boxes[i][0]])
                 pt2 = tuple([int(j) for j in boxes[i][1]])
+                #print('pt1: ', pt1, 'pt2: ', pt2)
                 cv2.rectangle(img_array, pt1, pt2,color=colour, thickness=rect_th)
                 cv2.putText(img_array,pred_cls[i], pt1, cv2.FONT_HERSHEY_SIMPLEX, text_size, colour,thickness=text_th)
 
-        return Image.fromarray(img_array), Image.fromarray(out_img, mode='RGBA')
+        return Image.fromarray(img_array), Image.fromarray(out_img, mode='RGBA'), pred_cls, labels

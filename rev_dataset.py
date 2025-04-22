@@ -29,7 +29,8 @@ class RevDataset(torch.utils.data.Dataset):
         mask_path = os.path.join('mask/', self.masks[idx])
         label_path = os.path.join('mask/', self.lables[idx])
 
-        img = Image.open(img_path).convert("RGB")
+        # img = Image.open(img_path).convert("RGB")
+        img = Image.open(img_path)
         # img = Image.open(img_path).convert("L")
         # note that we haven't converted the mask to RGB,
         # because each color corresponds to a different instance

@@ -1,5 +1,7 @@
 import os
+import shutil
 from PIL import ImageTk, Image
+
 
 def numerical_sort(filename):
     """Extracts the numerical part of the filename for sorting."""
@@ -35,3 +37,15 @@ class ImageManager:
 
     def convert_photo(self, img: Image):
         return ImageTk.PhotoImage(img)
+    
+    # delete all previous files
+    def clear_capture(self):
+        for filename in os.listdir('capture'):
+            file_path = os.path.join('capture', filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print('Failed to delete %s. Reason: %s' % (file_path, e))
