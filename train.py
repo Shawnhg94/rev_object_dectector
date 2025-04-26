@@ -87,7 +87,7 @@ lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
                                                 gamma=0.1)
 
 # let's train it for 5 epochs
-num_epochs = 20
+num_epochs = 5
 
 for epoch in range(num_epochs):
     # train for one epoch, printing every 10 iterations
@@ -99,5 +99,4 @@ for epoch in range(num_epochs):
 
 print("That's it!")
 
-# torch.save(model, 'mask-rcnn-pedestrian.pt')
 torch.save(model.state_dict(), 'rev_model.pt')

@@ -42,4 +42,5 @@ def parse_label(filepath:str):
     with open(filepath, 'r') as file:
         config = yaml.safe_load(file)
 
-    return list(config.values())
+    # return list(config.values())
+    return config

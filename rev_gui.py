@@ -136,7 +136,7 @@ class RevGUI:
             else:
                 self.current_label = self.label_manager.get_label(evt_name)
             frame_id = self.slice_var.get()
-            self.showImage(frame_id, filter= self.current_label)
+            self.showImage(frame_id)
             self.cur_filter = evt_name
 
     def capture_select(self):

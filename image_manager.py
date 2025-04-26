@@ -1,10 +1,16 @@
 import os
 import shutil
 from PIL import ImageTk, Image
+import numpy as np
+import cv2
 
+
+W = 640
+H = 360
 
 def numerical_sort(filename):
     """Extracts the numerical part of the filename for sorting."""
+    #print('filename:', filename)
     return int(filename.split('.')[0])
 
 class ImageManager:
@@ -17,6 +23,10 @@ class ImageManager:
         img = Image.open(img_path)
         self.height = img.height
         self.width = img.width
+
+        if (img.height > H and img.width > W):
+            self.height = H
+            self.width = W
 
         default_img = Image.new('RGB', (self.width, self.height), color='black')
         self.default_photo = ImageTk.PhotoImage(default_img)
@@ -33,7 +43,10 @@ class ImageManager:
     
     def get_img(self, idx: int):
         img_path = os.path.join(self.img_path, self.imgs[idx])
-        return Image.open(img_path)
+        img = Image.open(img_path)
+        if (img.height > H and img.width > W):
+            img = self.resize_image(img)
+        return img
 
     def convert_photo(self, img: Image):
         return ImageTk.PhotoImage(img)
@@ -49,3 +62,9 @@ class ImageManager:
                     shutil.rmtree(file_path)
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+    def resize_image(self, ori_img: Image):
+        img_array = np.array(ori_img)
+        img_resize = cv2.resize(img_array, (W, H))
+        #print('resize: ', img_resize.shape)
+        return Image.fromarray(img_resize)

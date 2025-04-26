@@ -14,9 +14,9 @@ class RevDataset(torch.utils.data.Dataset):
         # ensure that they are aligned
         # self.imgs = list(sorted(os.listdir(os.path.join(root, "PNGImages"))))
         # self.masks = list(sorted(os.listdir(os.path.join(root, "PedMasks"))))
-        self.imgs = list(sorted(os.listdir('input/')))
-        self.masks = sorted([f for f in os.listdir('mask/') if f.endswith('.png')])
-        self.lables = sorted([f for f in os.listdir('mask/') if f.endswith('.yaml')])
+        self.imgs = list(sorted(os.listdir('rev_input/')))
+        self.masks = sorted([f for f in os.listdir('rev_mask/') if f.endswith('.png')])
+        self.lables = sorted([f for f in os.listdir('rev_mask/') if f.endswith('.yaml')])
         self.log = False
         self.label_manager = LabelManager()
 
@@ -25,9 +25,9 @@ class RevDataset(torch.utils.data.Dataset):
         # img_path = os.path.join(self.root, "PNGImages", self.imgs[idx])
         # mask_path = os.path.join(self.root, "PedMasks", self.masks[idx])
 
-        img_path = os.path.join('input/', self.imgs[idx])
-        mask_path = os.path.join('mask/', self.masks[idx])
-        label_path = os.path.join('mask/', self.lables[idx])
+        img_path = os.path.join('rev_input/', self.imgs[idx])
+        mask_path = os.path.join('rev_mask/', self.masks[idx])
+        label_path = os.path.join('rev_mask/', self.lables[idx])
 
         # img = Image.open(img_path).convert("RGB")
         img = Image.open(img_path)
@@ -60,6 +60,7 @@ class RevDataset(torch.utils.data.Dataset):
         masks = mask == obj_ids[:, None, None]
 
         # get bounding box coordinates for each mask
+        #print('idx', idx)
         num_objs = len(obj_ids)
         if (self.log) :
             print('num_objs: ', num_objs, 'obj_ids', obj_ids, 'img_path: ', img_path)
@@ -77,7 +78,16 @@ class RevDataset(torch.utils.data.Dataset):
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
         # there is only one class
         # labels = torch.ones((num_objs,), dtype=torch.int64)
-        labels = parse_label(label_path)
+        target_label = parse_label(label_path)
+        
+        labels =[]
+        for i in obj_ids:
+            if (self.log):
+                print('obj', obj_ids, 'target', target_label)
+            label = target_label[i]
+            labels.append(label)
+
+
         labels = torch.as_tensor(labels, dtype=torch.int64)
         masks = torch.as_tensor(masks, dtype=torch.uint8)
 
