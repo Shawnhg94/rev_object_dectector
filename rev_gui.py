@@ -10,7 +10,7 @@ from threading import Thread
 from time import sleep
 from label_manager import LabelManager
 from image_manager import ImageManager
-from rev_vision import RevVision
+from rev_vision_v2 import RevVision
 import time
 
 class RevGUI:
@@ -90,7 +90,7 @@ class RevGUI:
         # Open a file selection dialog box to choose an image file
         self.file_path = filedialog.askdirectory(title="Select Input Folder")
         self.img_manager = ImageManager(self.file_path)
-        self.rev_vision = RevVision(self.img_manager)
+        self.rev_vision = RevVision()
         self.frame_num = self.img_manager.get_num()
         self.showFrameController()
         self.showImage(0)
