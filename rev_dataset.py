@@ -4,46 +4,76 @@ import torch
 from PIL import Image
 from label_manager import LabelManager
 from label_manager import parse_label
+import pandas as pd
+import json
 
 
 class RevDataset(torch.utils.data.Dataset):
-    def __init__(self, root, transforms):
+    def __init__(self, root, transforms, input_df = None, target_df = None):
         self.root = root
         self.transforms = transforms
-        # load all image files, sorting them to
-        # ensure that they are aligned
-        # self.imgs = list(sorted(os.listdir(os.path.join(root, "PNGImages"))))
-        # self.masks = list(sorted(os.listdir(os.path.join(root, "PedMasks"))))
-        self.imgs = list(sorted(os.listdir('rev_input/')))
-        self.masks = sorted([f for f in os.listdir('rev_mask/') if f.endswith('.png')])
-        self.lables = sorted([f for f in os.listdir('rev_mask/') if f.endswith('.yaml')])
-        self.log = False
+
+        if input_df is not None:
+            self.input_df = input_df
+        else:
+            self.input_df = pd.read_csv('input.csv')
+        if target_df is not None:
+            self.target_df = target_df
+        else:
+            self.target_df = pd.read_csv('target.csv')
+
+
+        self.log = True
         self.label_manager = LabelManager()
-
+        
     def __getitem__(self, idx):
-        # load images and masks
-        # img_path = os.path.join(self.root, "PNGImages", self.imgs[idx])
-        # mask_path = os.path.join(self.root, "PedMasks", self.masks[idx])
+        row_data = self.input_df.iloc[idx].to_dict()
+        path = row_data['path']
+        w = int(row_data['width'])
+        h = int(row_data['height'])
+        channels = int(row_data['channels'])
+        #print('path', path, 'w', w, 'h', h, 'channels', channels)
+        pixels_str = row_data['pixels']
+        pixel_values = np.array(list(map(int, pixels_str.split(','))))
+        if channels == 1:
+            mode = 'L'  # Grayscale
+            expected_shape = (h, w)
+        elif channels == 3:
+            mode = 'RGB'
+            expected_shape = (h, w, 3)
 
-        img_path = os.path.join('rev_input/', self.imgs[idx])
-        mask_path = os.path.join('rev_mask/', self.masks[idx])
-        label_path = os.path.join('rev_mask/', self.lables[idx])
+        img_array = pixel_values.reshape(expected_shape).astype(np.uint8)
+        img = Image.fromarray(img_array, mode=mode)
 
-        # img = Image.open(img_path).convert("RGB")
-        img = Image.open(img_path)
-        # img = Image.open(img_path).convert("L")
-        # note that we haven't converted the mask to RGB,
-        # because each color corresponds to a different instance
-        # with 0 being background
-        mask = Image.open(mask_path)
+        #Target
+        row_data = self.target_df.iloc[idx].to_dict()
+        path = row_data['path']
+        w = int(row_data['width'])
+        h = int(row_data['height'])
+        channels = int(row_data['channels'])
+        #print('path', path, 'w', w, 'h', h, 'channels', channels)
+        pixels_str = row_data['pixels']
+        pixel_values = np.array(list(map(int, pixels_str.split(','))))
+        if channels == 1:
+            mode = 'L'  # Grayscale
+            expected_shape = (h, w)
+        elif channels == 3:
+            mode = 'RGB'
+            expected_shape = (h, w, 3)
+        elif channels == 4:
+            mode = 'RGBA'
+            expected_shape = (h, w, 4)
+        img_array = pixel_values.reshape(expected_shape).astype(np.uint8)
+        mask_img = Image.fromarray(img_array, mode=mode)
+
+        label_map = row_data['object_label_map']
+        target_label = json.loads(label_map)
+
         # convert the PIL Image into a numpy array
-        mask = np.array(mask)
+        mask = np.array(mask_img)
 
         if (self.log) :
-            print('mask shape', mask.shape, 'img_path: ', img_path)
-
-        # label_num = self.label_manager.get_num()
-        # mask_label = np.zeros(label_num, (mask.shape[0], mask.shape[1]), np.uint8)
+            print('mask shape', mask.shape)
 
         # instances are encoded as different colors
         obj_ids = np.unique(mask)
@@ -51,40 +81,66 @@ class RevDataset(torch.utils.data.Dataset):
         obj_ids = obj_ids[1:]
 
 
-        # split the color-encoded mask into a set
-        # of binary masks
-
-        # for i in obj_ids:
-        #     mask_label[i] = mask == obj_ids[i, None, None]
-
         masks = mask == obj_ids[:, None, None]
+        if (self.log) :
+            print('masks shape', mask.shape)
 
         # get bounding box coordinates for each mask
         #print('idx', idx)
         num_objs = len(obj_ids)
         if (self.log) :
-            print('num_objs: ', num_objs, 'obj_ids', obj_ids, 'img_path: ', img_path)
+            print('num_objs: ', num_objs, 'obj_ids', obj_ids)
 
         boxes = []
         for i in range(num_objs):
             pos = np.where(masks[i])
-            xmin = np.min(pos[1])
-            xmax = np.max(pos[1])
-            ymin = np.min(pos[0])
-            ymax = np.max(pos[0])
-            boxes.append([xmin, ymin, xmax, ymax])
+            if pos[0].size == 0 or pos[1].size == 0:
+                raise AttributeError
+                continue
+            xmin_val = np.min(pos[1])
+            xmax_val = np.max(pos[1])
+            ymin_val = np.min(pos[0])
+            ymax_val = np.max(pos[0])
 
-        # convert everything into a torch.Tensor
+            if xmin_val >= xmax_val:
+                if xmax_val < masks.shape[2] - 1: # If there's space to expand to the right
+                    xmax_val = xmin_val + 1
+                elif xmin_val > 0: # If at the right edge, expand to the left
+                    xmin_val = xmax_val - 1
+                else: 
+                    xmax_val = xmin_val + 0.1 # Ensure float and slightly larger
+
+            # Ensure ymax is strictly greater than ymin
+            if ymin_val >= ymax_val:
+                if ymax_val < masks.shape[1] - 1: # If there's space to expand down
+                    ymax_val = ymin_val + 1
+                elif ymin_val > 0: # If at the bottom edge, expand up
+                    ymin_val = ymax_val - 1
+                else: # Similar to width, for 1-pixel height
+                    ymax_val = ymin_val + 0.1
+
+            # Convert to float, as downstream transforms and model expect float boxes
+            current_box = [float(xmin_val), float(ymin_val), float(xmax_val), float(ymax_val)]
+
+            # Final check, this should ideally not be needed if above logic is perfect for all edge cases
+            if not (current_box[2] > current_box[0] and current_box[3] > current_box[1]):
+                if not (current_box[2] > current_box[0]):
+                    current_box[2] = current_box[0] + 0.1
+                if not (current_box[3] > current_box[1]):
+                    current_box[3] = current_box[1] + 0.1
+                if (self.log):
+                    print(f"Warning: Adjusted a degenerate box for image_id {idx}, obj_id {obj_ids[i]}: to {current_box}")
+
+
+            boxes.append(current_box)
+
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        # there is only one class
-        # labels = torch.ones((num_objs,), dtype=torch.int64)
-        target_label = parse_label(label_path)
         
         labels =[]
         for i in obj_ids:
             if (self.log):
                 print('obj', obj_ids, 'target', target_label)
-            label = target_label[i]
+            label = target_label[str(i)]
             labels.append(label)
 
 
@@ -104,20 +160,11 @@ class RevDataset(torch.utils.data.Dataset):
         target["area"] = area
         target["iscrowd"] = iscrowd
 
-        if (self.log) :
-            print('img_path: ', img_path, 'boxes:', boxes.shape, 'labels:', labels.shape, 'masks:', masks.shape, 'image_id:', image_id.shape, 'area:', area.shape, 'iscrowd:', iscrowd.shape, 'num_objs', num_objs)
-            # print('boxes:', boxes.shape)
-            # print('labels:', labels.shape)
-            # print('masks:', masks.shape)
-            # print('image_id:', image_id.shape)
-            # print('area:', area.shape)
-            # print('iscrowd:', iscrowd.shape)
-            self.log = False
-
         if self.transforms is not None:
             img, target = self.transforms(img, target)
 
         return img, target
 
     def __len__(self):
-        return len(self.imgs)
+        return len(self.input_df)
+    

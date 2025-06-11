@@ -5,13 +5,14 @@ import numpy as np
 import cv2
 
 
-W = 640
-H = 360
+W = 400
+H = 240
 
 def numerical_sort(filename):
     """Extracts the numerical part of the filename for sorting."""
     #print('filename:', filename)
-    return int(filename.split('.')[0])
+    name = filename.split('_')[-1]
+    return int(name.split('.')[0])
 
 class ImageManager:
     def __init__(self, path: str):

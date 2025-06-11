@@ -47,7 +47,9 @@ def get_prediction(img_path, confidence):
     label_manager = LabelManager()
     num_classes = label_manager.get_num() + 1
     model = build_model(num_classes)
-    model.load_state_dict(torch.load('rev_model.pt', weights_only=True))
+    #model.load_state_dict(torch.load('rev_model.pt', weights_only=True))
+    model.load_state_dict(torch.load('mask-rcnn.pt', weights_only=True))
+    
     model.eval()
     
     CLASS_NAMES = ['__background__'] + label_manager.get_names()
